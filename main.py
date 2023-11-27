@@ -36,12 +36,12 @@ rows = []
 if __name__ == '__main__':
     # below is just an example, you may change it to whatever you want, or use it to test your code
     with open('vector.csv', 'r', encoding='utf-8') as f:
-        for i in f.readlines():
-            line = ""  # here you need to split the line into a list of numbers, and make a RowVector
+        line = ""  # here you need to split the line into a list of numbers, and make a RowVector
+        for _ in f:
             print(line)
             # 
             rows.append()
-        
+
     mat = Matrix(*rows)  # here you need to make a Matrix from the list of RowVectors
     print(mat)
     print(mat[0])
@@ -55,10 +55,7 @@ if __name__ == '__main__':
         equations = []
         vals = []
         for i in lines:
-            if i.beginwith('-'):
-                opr = '-'
-            else:
-                opr = '+'
+            opr = '-' if i.beginwith('-') else '+'
             for j in i:
                 num = ''
                 key = ''
@@ -74,6 +71,6 @@ if __name__ == '__main__':
                     continue
                 else:
                     key += i
-                    
+
 
     print(solve(transfer_equations_to_matrix(equations, vals)).out_latex_eqs())
