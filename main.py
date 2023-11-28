@@ -13,6 +13,7 @@ Notice:
 - Try your best to make your code Pythonic and elegant with Object-Oriented Programming.
 - You can add more classes and functions if you want, just make sure the requirements are met.
 """
+from typing import Any, Generator, overload
 
 
 class Vector:
@@ -35,7 +36,8 @@ class Vector:
         insert: Inserts a value at the specified index.
         remove: Removes and returns the value at the specified index.
     """
-    data: list[int | float | complex] = []
+
+    data: list[int | float | complex]
 
     def __init__(self, *args: int | float | complex):
         self.data = list(args)
@@ -78,7 +80,7 @@ class Vector:
         """
         return self.data.pop()
 
-    def insert(self, index:int, value:int|float|complex):
+    def insert(self, index: int, value: int | float | complex):
         """
         Insert a value to the vector at the given index
 
@@ -88,7 +90,7 @@ class Vector:
         """
         self.data.insert(index, value)
 
-    def remove(self, index:int) -> int | float | complex:
+    def remove(self, index: int) -> int | float | complex:
         """
         Remove the value at the given index
 
@@ -97,6 +99,9 @@ class Vector:
         """
         return self.data.pop(index)
 
+    def __add__(self, other):
+        return add(self, other)
+
 
 class RowVector(Vector):
     """
@@ -104,23 +109,37 @@ class RowVector(Vector):
 
     init method is not needed as it is the same as Vector:
     """
+
     def __str__(self) -> str:
-        return "\t".join([str(i) for i in self.data])
+        return "\t".join([str(_) for _ in self.data])
 
     def __repr__(self) -> str:
         return f"RowVector({super().__str__()})"
 
+    @property
+    def matrix(self):
+        """
+        Return a matrix with the row vector as its only row
+        """
+        return Matrix(self)
 
 class ColumnVector(Vector):
     """
     A basic ColumnVector class that inherits from Vector
     """
+
     def __str__(self) -> str:
-        return "\n".join([str(i) for i in self.data])
+        return "\n".join([str(_) for _ in self.data])
 
     def __repr__(self) -> str:
         return f"ColumnVector({super().__str__()})"
 
+    @property
+    def matrix(self):
+        """
+        Return a matrix with the column vector as its only column
+        """
+        return Matrix(*[RowVector(_) for _ in self.data])
 
 class Matrix:
     """
@@ -153,29 +172,45 @@ class Matrix:
         pop_row: Removes and returns the last row of the matrix.
         pop_column: Removes and returns the last column of the matrix.
     """
-    data: list[int|float|complex] = []
+    data: list[int | float | complex]
     __row_count: int = 0
     __column_count: int = 0
 
-    def __init__(self, *args: RowVector):
-        for row in args:
-            self.data.extend(row.data)
-        self.__row_count = len(args)
-        self.__column_count = len(args[0])
+    def __init__(self, *args: RowVector, **kwargs):
+        if not kwargs:
+            self.data = []
+            for row in args:
+                self.data.extend(row.data)
+            self.__row_count = len(args)
+            self.__column_count = len(args[0])
+        elif kwargs.keys() == {'row_count', 'column_count', 'data'}:
+            self.__row_count = kwargs['row_count']
+            self.__column_count = kwargs['column_count']
+            self.data = list(kwargs['data'])
 
-    def __getitem__(self, index:int) -> int | float | complex:
+    def __getitem__(self, index: int) -> int | float | complex:
         return self.data[index]
 
-    def __setitem__(self, index:int, value:int|float|complex):
+    def __setitem__(self, index: int, value: int | float | complex):
         self.data[index] = value
 
     def __len__(self):
         return len(self.data)
 
     def count_rows(self):
+        """
+        Returns the number of rows in the matrix.
+
+        :return: int: The number of rows in the matrix.
+        """
         return self.__row_count
 
     def count_columns(self):
+        """
+        Returns the number of columns in the matrix.
+
+        :return: int: The number of columns in the matrix.
+        """
         return self.__column_count
 
     def get_columns(self, *args: int):
@@ -185,16 +220,16 @@ class Matrix:
         :param args: the indices of the columns
         :return: a list of ColumnVector
         """
-        return [ColumnVector(*self.data[i::self.__column_count]) for i in args]
+        return [ColumnVector(*self.data[_::self.__column_count]) for _ in args]
 
-    def get_rows(self, *args: int):
+    def get_rows(self, *args: int) -> list[RowVector]:
         """
         Return a list of RowVector, each RowVector is a row of the matrix
 
         :param args: the indices of the rows
         :return: a list of RowVector
         """
-        return [RowVector(*self.data[i*self.__column_count:(i+1)*self.__column_count]) for i in args]
+        return [RowVector(*self.data[ind * self.__column_count: (ind + 1) * self.__column_count]) for ind in args]
 
     def __str__(self) -> str:
         return "\n".join([str(row) for row in self.get_rows(*range(self.__row_count))])
@@ -203,10 +238,10 @@ class Matrix:
         ret = ""
         for row in self.get_rows(*range(self.__row_count)):
             ret += ','.join([str(element) for element in row.data])
-            ret = f'{ret[:-1]};'
+            ret = f'{ret};'
         return f"Matrix({ret[:-1]})"
 
-    def insert_row(self, index:int, row:RowVector):
+    def insert_row(self, index: int, row: RowVector):
         """
         Insert a row to the matrix at the given index
 
@@ -214,12 +249,12 @@ class Matrix:
         :param row: the row to insert
         :return: None
         """
-        left = self.data[:index*self.__column_count]
-        right = self.data[index*self.__column_count:]
+        left = self.data[:index * self.__column_count]
+        right = self.data[index * self.__column_count:]
         self.data = left + row.data + right
         self.__row_count += 1
 
-    def insert_column(self, index:int, column:ColumnVector):
+    def insert_column(self, index: int, column: ColumnVector):
         """
         Insert a column to the matrix at the given index
 
@@ -232,7 +267,7 @@ class Matrix:
             self.data.insert(index, next(column_generator))
         self.__column_count += 1
 
-    def remove_row(self, index:int) -> RowVector:
+    def remove_row(self, index: int) -> RowVector:
         """
         Remove the row at the given index
 
@@ -240,13 +275,18 @@ class Matrix:
         :return: the removed row
         """
         row = self.get_rows(index)
-        left = self.data[:index*self.__column_count]
-        right = self.data[(index+1)*self.__column_count:]
+        left = self.data[:index * self.__column_count]
+        right = self.data[(index + 1) * self.__column_count:]
         self.data = left + right
         self.__row_count -= 1
         return row[0]
 
-    def remove_column(self, index:int) -> ColumnVector:
+    def __eq__(self, other):
+        if len(self) != len(other):
+            return False
+        return all(self[index] == other[index] for index in range(len(self)))
+
+    def remove_column(self, index: int) -> ColumnVector:
         """
         Remove the column at the given index
 
@@ -258,12 +298,17 @@ class Matrix:
         for ind in range(index, len(self) - len(column), self.__row_count):
             self.data.pop(ind)
         return column
-    
+
     def copy(self):
         """
         Return a copy of the matrix
         """
-        return type(self)(*self.get_rows(*range(self.__row_count)))
+        l = self.get_rows(*range(self.__row_count))
+        ret = Matrix(*l)
+        if self == ret:
+            return ret
+        else:
+            raise ValueError("The copy of the matrix is not the same as the matrix.")
 
     def pop_row(self):
         """
@@ -288,7 +333,7 @@ class Matrix:
             self.data.pop(index)
         return ret
 
-    def append_row(self, row:RowVector):
+    def append_row(self, row: RowVector):
         """
         Append a row to the end of the matrix
 
@@ -298,7 +343,7 @@ class Matrix:
         self.data.extend(row.data)
         self.__row_count += 1
 
-    def append_column(self, column:ColumnVector):
+    def append_column(self, column: ColumnVector):
         """
         Append a column to the end of the matrix
 
@@ -309,8 +354,64 @@ class Matrix:
         for index in range(self.__column_count, len(self.data) + len(column.data), self.__row_count):
             self.data.insert(index, next(column_generator))
         self.__column_count += 1
-# def add(a, b):
-#     return
+
+    def __add__(self, other):
+        if self.count_rows() != other.count_rows() or self.count_columns() != other.count_columns():
+            raise ValueError("The size of the two matrices must be the same.")
+        ret = self.copy()
+        for index in range(len(self)):
+            ret[index] += other[index]
+        return ret
+    
+    @property
+    def rows(self) -> list[RowVector]:
+        return self.get_rows(*range(self.__row_count))
+    
+    @property
+    def columns(self) -> list[ColumnVector]:
+        return self.get_columns(*range(self.__column_count))
+
+@overload
+def add(a: Matrix, b: Matrix) -> Matrix: ...
+
+@overload
+def add(a: RowVector, b: RowVector) -> RowVector: ...
+
+@overload
+def add(a: ColumnVector, b: ColumnVector) -> ColumnVector: ...
+
+@overload
+def add(a: object, b: object) -> Any: ...
+
+def add(a,b) -> Any:
+    """
+    Add two vectors or matrices or other objects
+
+    :param a: the first vector or matrix
+    """
+    if isinstance(a, Matrix) and isinstance(b, Matrix):
+        if (
+            a.count_rows() != b.count_rows()
+            or a.count_columns() != b.count_columns()
+        ):
+            raise ValueError("The size of the two matrices must be the same.")
+        a_rows: list[RowVector] = a.rows
+        b_rows: list[RowVector] = b.rows            
+        return Matrix(*(add(a_row, b_row) for a_row, b_row in zip(a_rows, b_rows)))
+    elif isinstance(a, RowVector) and isinstance(b, RowVector):
+        if len(a) != len(b):
+            raise ValueError("The length of the two vectors must be the same.")
+        return RowVector(*[a[num] + b[num] for num in range(len(a))])
+    elif isinstance(a, ColumnVector) and isinstance(b, ColumnVector):
+        if len(a) != len(b):
+            raise ValueError("The length of the two vectors must be the same.")
+        return ColumnVector(*[a[num] + b[num] for num in range(len(a))])
+    elif isinstance(a, Vector) and isinstance(b, Vector):
+        if len(a) != len(b):
+            raise ValueError("The length of the two vectors must be the same.")
+        return Vector(*[a[num] + b[num] for num in range(len(a))])
+    else:
+        return a+b
 #
 #
 # def subtract(a, b):
@@ -345,31 +446,32 @@ if __name__ == '__main__':
             vec2 = ColumnVector(*map(eval, line))
             rows.append(vec1.copy())
             columns.append(vec2)
-            print(f"A Row Vector:\n{vec1}")
+            # print(f"A Row Vector:\n{vec1}")
             vec1.remove(-1)
-            print(f"A Column Vector:\n{vec2}")
+            # print(f"A Column Vector:\n{vec2}")
             vec2.append(0)
 
     mat = Matrix(*rows)  # here you need to make a Matrix from the list of RowVectors
-    print(mat)
-    print(mat[0])
-    print(len(mat))
-    print(mat.count_rows())
-    print(mat.count_columns())
-    print(mat.get_columns(0, 1))
-    print(mat.get_rows(0, 1))
-    print(f"to insert two rows:\n{rows[0]}\n{rows[1]}")
+    # print(mat)
+    # print(mat[0])
+    # print(len(mat))
+    # print(mat.count_rows())
+    # print(mat.count_columns())
+    # print(mat.get_columns(0, 1))
+    # print(mat.get_rows(0, 1))
+    # print(f"to insert two rows:\n{rows[0]}\n{rows[1]}")
     mat.insert_row(0, rows[0])
     mat.append_row(rows[1])
-    print(mat)
-    print(f"to insert a column:\n{columns[0]}")
+    # print(mat)
+    # print(f"to insert a column:\n{columns[0]}")
     mat.insert_column(0, columns[0])
-    print(mat)
-    mat.remove_row(0)
-    print(mat.remove_column(0))
-    print(mat)
+    # print(mat)
+    # mat.remove_row(0)
+    # mat.remove_column(0)
+    # print(mat)
     print(mat.copy())
-    # print(add(mat, mat))
+    print()
+    print(add(mat, mat))
     # print(subtract(mat, mat))
     # print(scalar_multiply(mat, 2))
     # print(multiply(mat, mat))
