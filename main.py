@@ -35,7 +35,7 @@ class Vector:
         insert: Inserts a value at the specified index.
         remove: Removes and returns the value at the specified index.
     """
-    data: list[int | float | complex] = []
+    data: list[int | float | complex]
 
     def __init__(self, *args: int | float | complex):
         self.data = list(args)
@@ -153,11 +153,12 @@ class Matrix:
         pop_row: Removes and returns the last row of the matrix.
         pop_column: Removes and returns the last column of the matrix.
     """
-    data: list[int|float|complex] = []
+    data: list[int|float|complex]
     __row_count: int = 0
     __column_count: int = 0
 
     def __init__(self, *args: RowVector):
+        self.data = []
         for row in args:
             self.data.extend(row.data)
         self.__row_count = len(args)
