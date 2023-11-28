@@ -227,8 +227,9 @@ class Matrix:
         :param column: the column to insert
         :return: None
         """
-        for index in range(index, len(self.data) + len(column.data), self.__column_count + 1):
-            self.data.insert(index, column.data[index])
+        column_generator = iter(column)
+        for index in range(index, len(self.data) + len(column.data), self.__row_count):
+            self.data.insert(index, next(column_generator))
         self.__column_count += 1
 
     def remove_row(self, index:int) -> RowVector:
@@ -239,7 +240,9 @@ class Matrix:
         :return: the removed row
         """
         row = self.get_rows(index)
-        self.data = self.data[:index*self.__column_count] + self.data[(index+1)*self.__column_count:]
+        left = self.data[:index*self.__column_count]
+        right = self.data[(index+1)*self.__column_count:]
+        self.data = left + right
         self.__row_count -= 1
         return row[0]
 
@@ -250,11 +253,11 @@ class Matrix:
         :param index: the index of the column to remove
         :return: the removed column
         """
-        column = self.get_columns(index)
-        for index in range(index, len(self.data), self.__column_count):
-            self.data.pop(index)
+        column = self.get_columns(index)[0]
         self.__column_count -= 1
-        return column[0]
+        for ind in range(index, len(self) - len(column), self.__row_count):
+            self.data.pop(ind)
+        return column
     
     def copy(self):
         """
@@ -284,7 +287,28 @@ class Matrix:
         for index in range(self.__column_count, len(self.data), self.__column_count):
             self.data.pop(index)
         return ret
-    
+
+    def append_row(self, row:RowVector):
+        """
+        Append a row to the end of the matrix
+
+        :param row: the row to append
+        :return: None
+        """
+        self.data.extend(row.data)
+        self.__row_count += 1
+
+    def append_column(self, column:ColumnVector):
+        """
+        Append a column to the end of the matrix
+
+        :param column: the column to append
+        :return: None
+        """
+        column_generator = iter(column)
+        for index in range(self.__column_count, len(self.data) + len(column.data), self.__row_count):
+            self.data.insert(index, next(column_generator))
+        self.__column_count += 1
 # def add(a, b):
 #     return
 #
@@ -315,21 +339,36 @@ if __name__ == '__main__':
     columns = []
     with open('vector.csv', 'r', encoding='utf-8') as f:
         for i in f:
-            line = i.split(',')
-            print(line)
+            line = i.strip().split(',')
+            # print(line)
             vec1 = RowVector(*map(eval, line))
             vec2 = ColumnVector(*map(eval, line))
-            rows.append(vec1)
+            rows.append(vec1.copy())
             columns.append(vec2)
-            print("A Row Vector:\t", vec1)
-            vec1.append(0)
-            print("A Column Vector:\n", vec2)
-            vec2.remove(-1)
+            print(f"A Row Vector:\n{vec1}")
+            vec1.remove(-1)
+            print(f"A Column Vector:\n{vec2}")
+            vec2.append(0)
 
     mat = Matrix(*rows)  # here you need to make a Matrix from the list of RowVectors
     print(mat)
     print(mat[0])
     print(len(mat))
+    print(mat.count_rows())
+    print(mat.count_columns())
+    print(mat.get_columns(0, 1))
+    print(mat.get_rows(0, 1))
+    print(f"to insert two rows:\n{rows[0]}\n{rows[1]}")
+    mat.insert_row(0, rows[0])
+    mat.append_row(rows[1])
+    print(mat)
+    print(f"to insert a column:\n{columns[0]}")
+    mat.insert_column(0, columns[0])
+    print(mat)
+    mat.remove_row(0)
+    print(mat.remove_column(0))
+    print(mat)
+    print(mat.copy())
     # print(add(mat, mat))
     # print(subtract(mat, mat))
     # print(scalar_multiply(mat, 2))
