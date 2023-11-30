@@ -552,6 +552,11 @@ class Matrix:
         self.__row_count, self.__column_count = self.__column_count, self.__row_count
         return self.copy() if copy else self
 
+    def left_multiply(self, other:'Matrix') -> 'Matrix':
+        return other * self
+
+    def right_multiply(self, other:'Matrix') -> 'Matrix':
+        return self * other
 
 @overload
 def add(a: Matrix, b: Matrix) -> Matrix: ...
