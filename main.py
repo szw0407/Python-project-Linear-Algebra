@@ -13,10 +13,17 @@ Notice:
 - Try your best to make your code Pythonic and elegant with Object-Oriented Programming.
 - You can add more classes and functions if you want, just make sure the requirements are met.
 """
-from typing import Any, Callable, overload
+from typing import Any, Callable, Iterator, overload
 
 
-def check_operation(func: Callable[..., Any]) -> Callable[..., Any]:
+def check_operation_add_sub(func: Callable[..., Any]) -> Callable[..., Any]:
+    """
+    A decorator to check the validity of the two objects in addition and subtraction
+
+    :param func: the function to decorate
+    :return: the decorated function
+    """
+
     def validate_len_and_type(a: Any, b: Any):
         if len(a) != len(b):
             raise ValueError("The length of the two vectors must be the same.")
@@ -31,10 +38,37 @@ def check_operation(func: Callable[..., Any]) -> Callable[..., Any]:
                     raise TypeError("The two objects must be the same type.")
         if isinstance(a, Matrix) and (a.count_rows() != b.count_rows() or a.count_columns() != b.count_columns()):
             raise ValueError("The size of the two matrices must be the same.")
+
     def wrapper(a: Any, b: Any) -> Any:
+        nonlocal func
         validate_len_and_type(a, b)
         return func(a, b)
+
     return wrapper
+
+
+def check_type_external(func: Callable[..., Any]) -> Callable[..., Any]:
+    """
+    A decorator to check the validity of the two objects in addition and subtraction, but the two objects can be of
+    different types.
+
+    :param func: the function to decorate
+    :return: the decorated function
+    """
+
+    def wrapper(a: Any, b: Any):
+        nonlocal func
+        try:
+            a + b  # type: ignore  # pylint: disable=pointless-statement
+            a - b  # type: ignore  # pylint: disable=pointless-statement
+        except Exception:  # pylint: disable=broad-except
+            return check_operation_add_sub(func)(a, b)
+        else:
+            return func(a, b)
+
+    return wrapper
+
+
 class Vector:
     """
     A basic Vector class
@@ -76,11 +110,11 @@ class Vector:
     def __repr__(self) -> str:
         return f"Vector({str(self)})"
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[int | float | complex]:
         # in fact in new versions of Python it can directly call __getitem__ from 0 to len(self)
         # but Pylance thinks it better to define an iterator. Make it happy.
         return iter(self.data)
-    
+
     def copy(self):
         """
         Return a copy of the vector
@@ -123,12 +157,14 @@ class Vector:
         """
         return self.data.pop(index)
 
-    @check_operation
+    @check_operation_add_sub
     def __add__(self, other: 'Vector') -> 'Vector | None':
-        return add(self, other)
-        # In fact we should ALWAYS directly define __add__ in each class,
-        # 
-        # here is just an example of how to use add function, especially in recursion.
+        return type(self)(*[self[index] + other[index] for index in range(len(self))])
+
+    @check_operation_add_sub
+    def __sub__(self, other: 'Vector') -> 'Vector | None':
+        return type(self)(*[self[index] - other[index] for index in range(len(self))])
+
 
 class RowVector(Vector):
     """
@@ -142,6 +178,11 @@ class RowVector(Vector):
 
     def __repr__(self) -> str:
         return f"RowVector({super().__str__()})"
+
+    def __mul__(self, other: 'ColumnVector') -> int | float | complex:
+        if len(self) != len(other):
+            raise ValueError("The length of the two vectors must be the same.")
+        return sum(a * b for a, b in zip(self, other))
 
     @property
     def matrix(self):
@@ -206,24 +247,40 @@ class Matrix:
     __column_count: int = 0
 
     @overload
-    def __init__(self, *args: RowVector) -> None: ...
+    def __init__(self, *args: RowVector) -> None:
+        ...
+
     @overload
-    def __init__(self, *args:int | float | complex, row_count: int, column_count: int) -> None: ...
+    def __init__(self, *args: int | float | complex, row_count: int, column_count: int) -> None:
+        ...
+
     def __init__(self, *args: RowVector | int | float | complex, **kwargs: int):
         if not kwargs:
-            self.data = []
-            if not all(isinstance(_, RowVector) for _ in args):
-                raise ValueError("All the arguments must be RowVector.")
-            for row in args:
-                self.data.extend(row.data)  # type: ignore
+            self.data: list[int | float | complex] = []
             self.__row_count = len(args)
-            self.__column_count = len(args[0])  # type: ignore
+            self.__column_count = 0
+            for row in args:
+                if not isinstance(row, RowVector):
+                    raise TypeError("The arguments must be RowVector.")
+                self.data.extend(row.data)
+                col_count = len(row.data)
+                if col_count != self.__column_count:
+                    if self.__column_count == 0:
+                        self.__column_count = col_count
+                    else:
+                        raise ValueError("The number of columns in each row must be the same.")
+
         elif kwargs.keys() == {'row_count', 'column_count'}:
-            if not all(isinstance(_, (int, float, complex)) for _ in args):
-                raise ValueError("All the arguments must be int, float or complex.")
+
             self.__row_count = kwargs['row_count']
             self.__column_count = kwargs['column_count']
-            self.data = list(args)  # type: ignore
+            self.data = []
+            for elem in args:
+                if not isinstance(elem, (int, float, complex)):
+                    raise TypeError("The arguments must be int, float or complex.")
+                self.data.append(elem)
+            if len(self.data) != self.__row_count * self.__column_count:
+                raise ValueError("The number of elements must be equal to row_count * column_count.")
 
     def __getitem__(self, index: int) -> int | float | complex:
         return self.data[index]
@@ -296,7 +353,7 @@ class Matrix:
         :param column: the column to insert
         :return: None
         """
-        
+
         for index, value in zip(range(index, len(self.data) + len(column.data), self.__row_count), column):
             self.data.insert(index, value)
         self.__column_count += 1
@@ -331,7 +388,7 @@ class Matrix:
         """
         column = self.get_columns(index)[0]
         self.__column_count -= 1
-        for ind in range(index, len(self) - len(column), self.__row_count):
+        for ind in range(index, len(self) - len(column), self.__column_count):
             self.data.pop(ind)
         return column
 
@@ -352,7 +409,7 @@ class Matrix:
         self.data = self.data[:-self.__column_count]
         return ret
 
-    def pop_column(self):
+    def pop_column(self) -> ColumnVector:
         """
         Pop the **last** column of the matrix and return it
 
@@ -364,7 +421,7 @@ class Matrix:
             self.data.pop(index)
         return ret
 
-    def append_row(self, row: RowVector):
+    def append_row(self, row: RowVector) -> None:
         """
         Append a row to the end of the matrix
 
@@ -374,7 +431,7 @@ class Matrix:
         self.data.extend(row.data)
         self.__row_count += 1
 
-    def append_column(self, column: ColumnVector):
+    def append_column(self, column: ColumnVector) -> None:
         """
         Append a column to the end of the matrix
 
@@ -384,16 +441,12 @@ class Matrix:
         column_generator = iter(column)
         for index in range(self.__column_count, len(self.data) + len(column.data), self.__row_count):
             self.data.insert(index, next(column_generator))
-            # using zip is also OK, but you should learn how to use iter and next. You can refer to function insert_column, as they are similar.
+            # using zip is also OK, but you should learn how to use iter and next.
+            # You can refer to function insert_column, as they are similar.
         self.__column_count += 1
 
-    @check_operation
-    def __add__(self, other: Any) -> 'Matrix':
-        if not isinstance(other, Matrix):
-            try:
-                other = other.matrix
-            except AttributeError as exc:
-                raise TypeError("The two objects must be the same type or can be converted to Matrix.") from exc
+    @check_operation_add_sub
+    def __add__(self, other: 'Matrix') -> 'Matrix':
         if self.count_rows() != other.count_rows() or self.count_columns() != other.count_columns():
             raise ValueError("The size of the two matrices must be the same.")
         ret = self.copy()
@@ -401,12 +454,40 @@ class Matrix:
             ret[index] += other[index]
         return ret
 
+    @check_operation_add_sub
+    def __sub__(self, other: 'Matrix') -> 'Matrix':
+        if self.count_rows() != other.count_rows() or self.count_columns() != other.count_columns():
+            raise ValueError("The size of the two matrices must be the same.")
+        ret = self.copy()
+        for index in range(len(self)):
+            ret[index] -= other[index]
+        return ret
+
+    def __mul__(self, other: 'Matrix') -> 'Matrix':
+        if self.count_columns() != other.count_rows():
+            raise ValueError(
+                "The number of columns in the first matrix must be equal to the number of rows in the second matrix.")
+        return Matrix(*(sum(map(lambda x, y: x * y, row, col)) for row in self.rows for col in other.columns),
+                      row_count=self.count_rows(),
+                      column_count=other.count_columns()
+                      )
+
     @property
     def rows(self) -> list[RowVector]:
+        """
+        Return a list of RowVector, each RowVector is a row of the matrix
+
+        :return: a list of RowVector
+        """
         return self.get_rows(*range(self.__row_count))
 
     @property
     def columns(self) -> list[ColumnVector]:
+        """
+        Return a list of ColumnVector, each ColumnVector is a column of the matrix
+
+        :return: a list of ColumnVector
+        """
         return self.get_columns(*range(self.__column_count))
 
     def transpose(self, operate_on_self: bool = False, copy: bool = False) -> 'Matrix':
@@ -418,12 +499,11 @@ class Matrix:
         :return: the transpose of the matrix
         """
         if not operate_on_self:
-            ret = self.copy()
-            return ret.transpose(operate_on_self=True)
-        new_data = []
+            return self.copy().transpose(operate_on_self=True)
+        new_data: list[int | float | complex] = []
         z = zip(*self.rows)
         for row in z:
-            new_data.extend(row)  # type: ignore
+            new_data.extend(row)
         self.data = new_data
         self.__row_count, self.__column_count = self.__column_count, self.__row_count
         return self.copy() if copy else self
@@ -431,42 +511,59 @@ class Matrix:
 
 @overload
 def add(a: Matrix, b: Matrix) -> Matrix: ...
+
+
 @overload
 def subtract(a: Matrix, b: Matrix) -> Matrix: ...
 
+
 @overload
 def add(a: RowVector, b: RowVector) -> RowVector: ...
+
+
 @overload
 def subtract(a: RowVector, b: RowVector) -> RowVector: ...
 
+
 @overload
 def add(a: ColumnVector, b: ColumnVector) -> ColumnVector: ...
+
+
 @overload
 def subtract(a: ColumnVector, b: ColumnVector) -> ColumnVector: ...
+
+
 @overload
 def add(a: Vector, b: Vector) -> Vector: ...
+
+
 @overload
 def subtract(a: Vector, b: Vector) -> Vector: ...
 
+
 @overload
 def add(a: Any, b: Any) -> Any: ...
+
+
 @overload
 def subtract(a: Any, b: Any) -> Any: ...
 
 
-@check_operation
-def add(a: Any | Matrix | RowVector | ColumnVector | Vector, b: Any | Matrix | RowVector | ColumnVector | Vector) -> Any | Matrix | RowVector | ColumnVector | Vector:
+@check_type_external
+def add(a: Any | Matrix | RowVector | ColumnVector | Vector,
+        b: Any | Matrix | RowVector | ColumnVector | Vector) -> Any | Matrix | RowVector | ColumnVector | Vector:
     """
     Add two vectors or matrices or other objects
 
-    **Notice**: This function is just an example, in fact we should define `__add__` functions in each class, and then use `+` to add two objects.
+    **Notice**: This function is just an example.
+    In fact we should define `__add__` functions in each class, and then use `+` to add two objects.
 
     :param a: the first vector or matrix
     :param b: the second vector or matrix
     :return: the sum
     """
-    if isinstance(a, Matrix):
-        return Matrix(*(add(a_row, b_row) for a_row, b_row in zip(a.rows, b.rows)))  # type: ignore
+    if isinstance(a, Matrix) and isinstance(b, Matrix):
+        return Matrix(*(add(a_row, b_row) for a_row, b_row in zip(a.rows, b.rows)))
     elif isinstance(a, RowVector):
         return RowVector(*[a[num] + b[num] for num in range(len(a))])
     elif isinstance(a, ColumnVector):
@@ -476,8 +573,10 @@ def add(a: Any | Matrix | RowVector | ColumnVector | Vector, b: Any | Matrix | R
     else:
         return a + b
 
-@check_operation
-def subtract(a: Any | Matrix | RowVector | ColumnVector | Vector, b: Any | Matrix | RowVector | ColumnVector | Vector) -> Any | Matrix | RowVector | ColumnVector | Vector:
+
+@check_type_external
+def subtract(a: Any | Matrix | RowVector | ColumnVector | Vector,
+             b: Any | Matrix | RowVector | ColumnVector | Vector) -> Any | Matrix | RowVector | ColumnVector | Vector:
     """
     Subtract two vectors or matrices or other objects
 
@@ -485,8 +584,8 @@ def subtract(a: Any | Matrix | RowVector | ColumnVector | Vector, b: Any | Matri
     :param b: the second vector or matrix
     :return: the difference
     """
-    if isinstance(a, Matrix):
-        return Matrix(*(subtract(a_row, b_row) for a_row, b_row in zip(a.rows, b.rows)))    # type: ignore
+    if isinstance(a, Matrix) and isinstance(b, Matrix):
+        return Matrix(*(subtract(a_row, b_row) for a_row, b_row in zip(a.rows, b.rows)))
     elif isinstance(a, RowVector):
         return RowVector(*[a[num] - b[num] for num in range(len(a))])
     elif isinstance(a, ColumnVector):
@@ -495,43 +594,89 @@ def subtract(a: Any | Matrix | RowVector | ColumnVector | Vector, b: Any | Matri
         return Vector(*[a[num] - b[num] for num in range(len(a))])
     else:
         return a - b
-    
 
 
 @overload
-def scalar_multiply(a: Matrix, b: int | float | complex) -> Matrix: ...
+def scalar_multiply(a: Matrix, num: int | float | complex) -> Matrix: ...
+
 
 @overload
-def scalar_multiply(a: RowVector, b: int | float | complex) -> RowVector: ...
+def scalar_multiply(a: RowVector, num: int | float | complex) -> RowVector: ...
+
 
 @overload
-def scalar_multiply(a: ColumnVector, b: int | float | complex) -> ColumnVector: ...
+def scalar_multiply(a: ColumnVector, num: int | float | complex) -> ColumnVector: ...
+
 
 @overload
-def scalar_multiply(a: Vector, b: int | float | complex) -> Vector: ...
+def scalar_multiply(a: Vector, num: int | float | complex) -> Vector: ...
+
 
 @overload
-def scalar_multiply(a: Any, b: int | float | complex) -> Any: ...
+def scalar_multiply(a: Any, num: int | float | complex) -> Any: ...
 
-def scalar_multiply(a: Matrix | RowVector | ColumnVector | Vector | Any, b: int | float | complex) -> Matrix | RowVector | ColumnVector | Vector | Any:
+
+def scalar_multiply(a: Matrix | RowVector | ColumnVector | Vector | Any,
+                    num: int | float | complex) -> Matrix | RowVector | ColumnVector | Vector | Any:
     """
     Multiply a vector or matrix by a scalar
 
     :param a: the vector or matrix
-    :param b: the scalar
+    :param num: the scalar
     :return: the product
     """
     if isinstance(a, Matrix):
-        return Matrix(*(b*elem for elem in a), row_count=a.count_rows(), column_count=a.count_columns())
+        return Matrix(*(num * elem for elem in a), row_count=a.count_rows(), column_count=a.count_columns())
     elif isinstance(a, (RowVector, ColumnVector, Vector)):
-        return type(a)(*[num * b for num in a])
+        return type(a)(*[num * num for num in a])
     else:
-        return a * b
+        return a * num
 
-#
-#
-# def multiply(a, b):
-#     return
+
+def mul(a: Matrix | RowVector | ColumnVector | Any, b: Matrix | RowVector | ColumnVector | Any) -> Matrix | Any:
+    """
+    Multiply two vectors or matrices or other objects
+
+    :param a: the first vector or matrix or something else
+    :param b: the second vector or matrix or something else
+    :return: the product
+    """
+    if isinstance(a, (int, float, complex)):
+        return scalar_multiply(b, a)
+    if isinstance(b, (int, float, complex)):
+        return scalar_multiply(a, b)
+    match a:
+        case Matrix():
+            match b:
+                case Matrix():
+                    return a * b
+                case RowVector() | ColumnVector():
+                    return a * b.matrix
+                case _:
+                    raise TypeError("The second argument must be Matrix, RowVector , ColumnVector or scalar when the "
+                                    "first argument is Matrix.")
+        case RowVector():
+            match b:
+                case Matrix():
+                    return a.matrix * b
+                case ColumnVector():
+                    return a * b
+                case _:
+                    raise TypeError("The second argument must be Matrix, RowVector , ColumnVector or scalar when the "
+                                    "first argument is RowVector.")
+        case ColumnVector():
+            match b:
+                case Matrix():
+                    return a.matrix * b
+                case RowVector():
+                    return a.matrix * b.matrix
+                case _:
+                    raise TypeError("The second argument must be Matrix, RowVector , ColumnVector or scalar when the "
+                                    "first argument is ColumnVector.")
+        case _:
+            return a * b
+
+
 #
 #
 # def transfer_equations_to_matrix(equations, vals):
@@ -544,8 +689,8 @@ def scalar_multiply(a: Matrix | RowVector | ColumnVector | Vector | Any, b: int 
 
 if __name__ == '__main__':
     # below is just an example, you may change it to whatever you want, or use it to test your code
-    rows:list[RowVector] = []
-    columns:list[ColumnVector] = []
+    rows: list[RowVector] = []
+    columns: list[ColumnVector] = []
     with open('vector.csv', 'r', encoding='utf-8') as f:
         for i in f:
             line = i.strip().split(',')
@@ -573,20 +718,22 @@ if __name__ == '__main__':
     # print(mat)
     # print(f"to insert a column:\n{columns[0]}")
     mat.insert_column(0, columns[0])
-    # print(mat)
+
     # mat.remove_row(0)
     mat.remove_column(0)
-    # print(mat)
+
     print(mat.copy())
-    print()
+    print(add('---', '---'))
     # print(add(mat, mat))
     # print(mat.transpose(operate_on_self=True, copy=True))
-    
+
     # print(mat.transpose(operate_on_self=True, copy=False))
-    print(mat + scalar_multiply(mat, -1).pop_column())
+    print(add(mat, mat))
     # print(subtract(mat, mat.copy()))
     # print(scalar_multiply(mat, 2))
-    # print(multiply(mat, mat))
+    print(mat * mat.transpose())
+    print(mat.transpose() * mat)
+    print(mul('-', 15))
     # with open('equations.txt', 'r', encoding='utf-8') as f:
     #     lines = f.readlines()
     #     equations = []
