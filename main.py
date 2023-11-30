@@ -56,8 +56,10 @@ def check_type_external(func: Callable[..., Any]) -> Callable[..., Any]:
     :return: the decorated function
     """
 
+    # noinspection PyStatementEffect
     def wrapper(a: Any, b: Any):
         nonlocal func
+        # noinspection PyBroadException
         try:
             a + b  # type: ignore  # pylint: disable=pointless-statement
             a - b  # type: ignore  # pylint: disable=pointless-statement
@@ -219,7 +221,7 @@ class Matrix:
         *args (RowVector): Variable number of RowVector objects representing the rows of the matrix.
 
     Attributes:
-        data (list[int|float|complex]): List containing the elements of the matrix.
+        __data (list[int|float|complex]): List containing the elements of the matrix.
         __row_count (int): Number of rows in the matrix.
         __column_count (int): Number of columns in the matrix.
 
@@ -241,8 +243,17 @@ class Matrix:
         copy: Returns a copy of the matrix.
         pop_row: Removes and returns the last row of the matrix.
         pop_column: Removes and returns the last column of the matrix.
+        append_row: Appends a row to the end of the matrix.
+        append_column: Appends a column to the end of the matrix.
+        __add__: Adds two matrices.
+        __sub__: Subtracts two matrices.
+        __mul__: Multiplies two matrices.
+        rows: Returns a list of RowVector objects representing the rows of the matrix.
+        columns: Returns a list of ColumnVector objects representing the columns of the matrix.
+        __call__: Returns the element at the specified index.
+        transpose: Returns the transpose of the matrix.
     """
-    data: list[int | float | complex]
+    __data: list[int | float | complex]
     __row_count: int = 0
     __column_count: int = 0
 
@@ -256,13 +267,13 @@ class Matrix:
 
     def __init__(self, *args: RowVector | int | float | complex, **kwargs: int):
         if not kwargs:
-            self.data: list[int | float | complex] = []
+            self.__data: list[int | float | complex] = []
             self.__row_count = len(args)
             self.__column_count = 0
             for row in args:
                 if not isinstance(row, RowVector):
                     raise TypeError("The arguments must be RowVector.")
-                self.data.extend(row.data)
+                self.__data.extend(row.data)
                 col_count = len(row.data)
                 if col_count != self.__column_count:
                     if self.__column_count == 0:
@@ -271,25 +282,24 @@ class Matrix:
                         raise ValueError("The number of columns in each row must be the same.")
 
         elif kwargs.keys() == {'row_count', 'column_count'}:
-
             self.__row_count = kwargs['row_count']
             self.__column_count = kwargs['column_count']
-            self.data = []
+            self.__data = []
             for elem in args:
                 if not isinstance(elem, (int, float, complex)):
                     raise TypeError("The arguments must be int, float or complex.")
-                self.data.append(elem)
-            if len(self.data) != self.__row_count * self.__column_count:
+                self.__data.append(elem)
+            if len(self.__data) != self.__row_count * self.__column_count:
                 raise ValueError("The number of elements must be equal to row_count * column_count.")
 
     def __getitem__(self, index: int) -> int | float | complex:
-        return self.data[index]
+        return self.__data[index]
 
     def __setitem__(self, index: int, value: int | float | complex):
-        self.data[index] = value
+        self.__data[index] = value
 
     def __len__(self):
-        return len(self.data)
+        return len(self.__data)
 
     def count_rows(self):
         """
@@ -314,7 +324,9 @@ class Matrix:
         :param args: the indices of the columns
         :return: a list of ColumnVector
         """
-        return [ColumnVector(*self.data[_::self.__column_count]) for _ in args]
+        if not all(0 <= _ < self.__column_count for _ in args):
+            raise IndexError('Invalid index')
+        return [ColumnVector(*self.__data[_::self.__column_count]) for _ in args]
 
     def get_rows(self, *args: int) -> list[RowVector]:
         """
@@ -323,13 +335,15 @@ class Matrix:
         :param args: the indices of the rows
         :return: a list of RowVector
         """
-        return [RowVector(*self.data[ind * self.__column_count: (ind + 1) * self.__column_count]) for ind in args]
+        if not all(0 <= _ < self.__row_count for _ in args):
+            raise IndexError('Invalid index')
+        return [RowVector(*self.__data[ind * self.__column_count: (ind + 1) * self.__column_count]) for ind in args]
 
     def __str__(self) -> str:
         return "\n".join([str(row) for row in self.get_rows(*range(self.__row_count))])
 
     def __repr__(self) -> str:
-        ret = ",".join([str(_) for _ in self.data])
+        ret = ",".join([str(_) for _ in self.__data])
         return f"Matrix({ret}, row_count={self.__row_count}, column_count={self.__column_count})"
 
     def insert_row(self, index: int, row: RowVector):
@@ -340,9 +354,13 @@ class Matrix:
         :param row: the row to insert
         :return: None
         """
-        left = self.data[:index * self.__column_count]
-        right = self.data[index * self.__column_count:]
-        self.data = left + row.data + right
+        if len(row) != self.__column_count:
+            raise ValueError("The length of the row must be equal to the number of columns in the matrix.")
+        if index > self.__row_count or index < 0:
+            raise IndexError('Invalid index')
+        left = self.__data[:index * self.__column_count]
+        right = self.__data[index * self.__column_count:]
+        self.__data = left + row.data + right
         self.__row_count += 1
 
     def insert_column(self, index: int, column: ColumnVector):
@@ -353,9 +371,12 @@ class Matrix:
         :param column: the column to insert
         :return: None
         """
-
-        for index, value in zip(range(index, len(self.data) + len(column.data), self.__row_count), column):
-            self.data.insert(index, value)
+        if len(column) != self.__row_count:
+            raise ValueError("The length of the column must be equal to the number of rows in the matrix.")
+        if index > self.__column_count or index < 0:
+            raise IndexError('Invalid index')
+        for index, value in zip(range(index, len(self.__data) + len(column.data), self.__row_count), column):
+            self.__data.insert(index, value)
         self.__column_count += 1
 
     def remove_row(self, index: int) -> RowVector:
@@ -365,10 +386,12 @@ class Matrix:
         :param index: the index of the row to remove
         :return: the removed row
         """
+        if index >= self.__row_count or index < 0:
+            raise IndexError('Invalid index')
         row = self.get_rows(index)
-        left = self.data[:index * self.__column_count]
-        right = self.data[(index + 1) * self.__column_count:]
-        self.data = left + right
+        left = self.__data[:index * self.__column_count]
+        right = self.__data[(index + 1) * self.__column_count:]
+        self.__data = left + right
         self.__row_count -= 1
         return row[0]
 
@@ -386,17 +409,19 @@ class Matrix:
         :param index: the index of the column to remove
         :return: the removed column
         """
+        if index >= self.__column_count or index < 0:
+            raise IndexError('Invalid index')
         column = self.get_columns(index)[0]
         self.__column_count -= 1
         for ind in range(index, len(self) - len(column), self.__column_count):
-            self.data.pop(ind)
+            self.__data.pop(ind)
         return column
 
     def copy(self):
         """
         Return a copy of the matrix
         """
-        return Matrix(*self.data, row_count=self.__row_count, column_count=self.__column_count)
+        return Matrix(*self.__data, row_count=self.__row_count, column_count=self.__column_count)
 
     def pop_row(self):
         """
@@ -406,7 +431,7 @@ class Matrix:
         """
         self.__row_count -= 1
         ret = self.get_rows(self.__row_count)[0]
-        self.data = self.data[:-self.__column_count]
+        self.__data = self.__data[:-self.__column_count]
         return ret
 
     def pop_column(self) -> ColumnVector:
@@ -417,8 +442,8 @@ class Matrix:
         """
         self.__column_count -= 1
         ret = self.get_columns(self.__column_count)[0]
-        for index in range(self.__column_count, len(self.data) - self.__row_count, self.__column_count):
-            self.data.pop(index)
+        for index in range(self.__column_count, len(self.__data) - self.__row_count, self.__column_count):
+            self.__data.pop(index)
         return ret
 
     def append_row(self, row: RowVector) -> None:
@@ -428,7 +453,9 @@ class Matrix:
         :param row: the row to append
         :return: None
         """
-        self.data.extend(row.data)
+        if len(row) != self.__column_count:
+            raise ValueError("The length of the row must be equal to the number of columns in the matrix.")
+        self.__data.extend(row.data)
         self.__row_count += 1
 
     def append_column(self, column: ColumnVector) -> None:
@@ -438,9 +465,11 @@ class Matrix:
         :param column: the column to append
         :return: None
         """
+        if len(column) != self.__row_count:
+            raise ValueError("The length of the column must be equal to the number of rows in the matrix.")
         column_generator = iter(column)
-        for index in range(self.__column_count, len(self.data) + len(column.data), self.__row_count):
-            self.data.insert(index, next(column_generator))
+        for index in range(self.__column_count, len(self.__data) + len(column.data), self.__row_count):
+            self.__data.insert(index, next(column_generator))
             # using zip is also OK, but you should learn how to use iter and next.
             # You can refer to function insert_column, as they are similar.
         self.__column_count += 1
@@ -467,10 +496,20 @@ class Matrix:
         if self.count_columns() != other.count_rows():
             raise ValueError(
                 "The number of columns in the first matrix must be equal to the number of rows in the second matrix.")
-        return Matrix(*(sum(map(lambda x, y: x * y, row, col)) for row in self.rows for col in other.columns),
-                      row_count=self.count_rows(),
-                      column_count=other.count_columns()
-                      )
+        return Matrix(*(
+            sum(
+                    map(lambda x, y: x * y, row, col)
+                ) for row in (
+                    self.__data[
+                        index: index + self.count_columns()
+                    ] for index in range(0, len(self), self.count_columns())
+                ) for col in (
+                    other.__data[index: len(other): other.count_columns()] for index in range(other.count_columns())
+                )
+            ),
+                    row_count=self.count_rows(),
+                    column_count=other.count_columns()
+                )
 
     @property
     def rows(self) -> list[RowVector]:
@@ -490,6 +529,11 @@ class Matrix:
         """
         return self.get_columns(*range(self.__column_count))
 
+    def __call__(self, x: int, y: int) -> int | float | complex:
+        if x >= self.__row_count or y >= self.__column_count or x < 0 or y < 0:
+            raise IndexError("Index out of range.")
+        return self.__data[x * self.__column_count + y]
+
     def transpose(self, operate_on_self: bool = False, copy: bool = False) -> 'Matrix':
         """
         Return the transpose of the matrix
@@ -504,7 +548,7 @@ class Matrix:
         z = zip(*self.rows)
         for row in z:
             new_data.extend(row)
-        self.data = new_data
+        self.__data = new_data
         self.__row_count, self.__column_count = self.__column_count, self.__row_count
         return self.copy() if copy else self
 
@@ -630,6 +674,7 @@ def scalar_multiply(a: Matrix | RowVector | ColumnVector | Vector | Any,
     elif isinstance(a, (RowVector, ColumnVector, Vector)):
         return type(a)(*[num * num for num in a])
     else:
+        # noinspection PyTypeChecker
         return a * num
 
 
@@ -715,7 +760,7 @@ if __name__ == '__main__':
     # print(f"to insert two rows:\n{rows[0]}\n{rows[1]}")
     mat.insert_row(0, rows[0])
     mat.append_row(rows[1])
-    # print(mat)
+    print(mat(0, 2))
     # print(f"to insert a column:\n{columns[0]}")
     mat.insert_column(0, columns[0])
 
