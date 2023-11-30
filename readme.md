@@ -98,13 +98,13 @@
 - `count_columns`：这个方法用来返回这个对象的列数。例如，`matrix1.count_columns()` 就会返回 3。
 - `get_rows`：这个方法用来返回这个对象的行向量。例如，`matrix1.get_rows(1,3)` 就会返两个行向量，分别是第 1 行和第 3 行。
 - `get_columns`：这个方法用来返回这个对象的列向量。例如，`matrix1.get_columns(1,3)` 就会返两个列向量，分别是第 1 列和第 3 列。
-- `append_row`：这个方法用来在这个对象的末尾添加一行。例如，`matrix1.append_row(row_vector4)` 就会把 `row_vector4` 添加到这个矩阵的末尾。注意，这个方法只能用于列向量，因为行向量的末尾是没有意义的。
+- `append_row`：这个方法用来在这个对象的末尾添加一行。例如，`matrix1.append_row(row_vector4)` 就会把 `row_vector4` 添加到这个矩阵的末尾。
 - `insert_row`：这个方法用来在这个对象的第 `i` 行之前插入一行。例如，`matrix1.insert_row(1, row_vector4)` 就会把 `row_vector4` 插入到这个矩阵的第 1 行之前。**（选做）**
-- `pop_row`：这个方法用来删除这个对象的最后一行。例如，`matrix1.pop_row()` 就会把这个矩阵的最后一行删除。注意，这个方法只能用于列向量，因为行向量的最后一行是没有意义的。
+- `pop_row`：这个方法用来删除这个对象的最后一行。例如，`matrix1.pop_row()` 就会把这个矩阵的最后一行删除。
 - `remove_row`：这个方法用来删除这个对象的第 `i` 行。例如，`matrix1.remove_row(1)` 就会把这个矩阵的第 1 行删除。**（选做）**
 - `append_column`：这个方法用来在这个对象的末尾添加一列。例如，`matrix1.append_column(column_vector4)` 就会把 `column_vector4` 添加到这个矩阵的末尾。注意，这个方法只能用于列向量，因为行向量的末尾是没有意义的。
 - `insert_column`：这个方法用来在这个对象的第 `j` 列之前插入一列。例如，`matrix1.insert_column(1, column_vector4)` 就会把 `column_vector4` 插入到这个矩阵的第 1 列之前。
-- `pop_column`：这个方法用来删除这个对象的最后一列。例如，`matrix1.pop_column()` 就会把这个矩阵的最后一列删除。注意，这个方法只能用于列向量，因为行向量的最后一列是没有意义的。
+- `pop_column`：这个方法用来删除这个对象的最后一列。例如，`matrix1.pop_column()` 就会把这个矩阵的最后一列删除。
 - `remove_column`：这个方法用来删除这个对象的第 `j` 列。例如，`matrix1.remove_column(1)` 就会把这个矩阵的第 1 列删除。
 
 同样的，如果你觉得这些方法太多了，你可以只实现 `copy`、`append_row`、`pop_row`、`append_column`、`pop_column` 这五个方法；如果你还是觉得有点难度，你可以只实现 `copy`、`append_row`、`pop_row` 这三个方法。
