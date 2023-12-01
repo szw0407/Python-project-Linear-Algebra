@@ -412,7 +412,7 @@ $$
 
 $$
 \begin{bmatrix}
-1 & 0 & 1 & \frac{1}{3}\\
+1 & 0 & 1 & -\frac{1}{3}\\
 0 & 1 & 2 & \frac{2}{3}\\
 0 & 0 & 0 & 0
 \end{bmatrix}
@@ -422,7 +422,7 @@ $$
 
 $$
 \begin{cases}
-x+z=\frac{1}{3}\\
+x+z=-\frac{1}{3}\\
 y+2z=\frac{2}{3}
 \end{cases}
 $$
