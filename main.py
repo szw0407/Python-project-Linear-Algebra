@@ -13,7 +13,7 @@ Notice:
 - Try your best to make your code Pythonic and elegant with Object-Oriented Programming.
 - You can add more classes and functions if you want, just make sure the requirements are met.
 """
-from typing import Any, Callable, Iterator, Self, overload
+from typing import Any, Callable, Iterator, Self, overload, Literal
 
 
 def check_operation_add_sub(func: Callable[..., Any]) -> Callable[..., Any]:
@@ -36,7 +36,9 @@ def check_operation_add_sub(func: Callable[..., Any]) -> Callable[..., Any]:
             finally:
                 if type(a) is not type(b):
                     raise TypeError("The two objects must be the same type.")
-        if isinstance(a, Matrix) and (a.count_rows() != b.count_rows() or a.count_columns() != b.count_columns()):
+        if isinstance(a, Matrix) and (
+            a.count_rows() != b.count_rows() or a.count_columns() != b.count_columns()
+        ):
             raise ValueError("The size of the two matrices must be the same.")
 
     def wrapper(a: Any, b: Any) -> Any:
@@ -56,10 +58,8 @@ def check_type_external(func: Callable[..., Any]) -> Callable[..., Any]:
     :return: the decorated function
     """
 
-    # noinspection PyStatementEffect
     def wrapper(a: Any, b: Any):
         nonlocal func
-        # noinspection PyBroadException
         try:
             a + b  # type: ignore  # pylint: disable=pointless-statement
             a - b  # type: ignore  # pylint: disable=pointless-statement
@@ -160,11 +160,11 @@ class Vector:
         return self.data.pop(index)
 
     @check_operation_add_sub
-    def __add__(self, other: 'Vector') -> Self:
+    def __add__(self, other: "Vector") -> Self:
         return type(self)(*[self[index] + other[index] for index in range(len(self))])
 
     @check_operation_add_sub
-    def __sub__(self, other: 'Vector') -> Self:
+    def __sub__(self, other: "Vector") -> Self:
         return type(self)(*[self[index] - other[index] for index in range(len(self))])
 
 
@@ -181,7 +181,7 @@ class RowVector(Vector):
     def __repr__(self) -> str:
         return f"RowVector({super().__str__()})"
 
-    def __mul__(self, other: 'ColumnVector') -> int | float | complex:
+    def __mul__(self, other: "ColumnVector") -> int | float | complex:
         if len(self) != len(other):
             raise ValueError("The length of the two vectors must be the same.")
         return sum(a * b for a, b in zip(self, other))
@@ -253,6 +253,7 @@ class Matrix:
         __call__: Returns the element at the specified index.
         transpose: Returns the transpose of the matrix.
     """
+
     __data: list[int | float | complex]
     __row_count: int = 0
     __column_count: int = 0
@@ -262,7 +263,9 @@ class Matrix:
         ...
 
     @overload
-    def __init__(self, *args: int | float | complex, row_count: int, column_count: int) -> None:
+    def __init__(
+        self, *args: int | float | complex, row_count: int, column_count: int
+    ) -> None:
         ...
 
     def __init__(self, *args: RowVector | int | float | complex, **kwargs: int):
@@ -279,18 +282,22 @@ class Matrix:
                     if self.__column_count == 0:
                         self.__column_count = col_count
                     else:
-                        raise ValueError("The number of columns in each row must be the same.")
+                        raise ValueError(
+                            "The number of columns in each row must be the same."
+                        )
 
-        elif kwargs.keys() == {'row_count', 'column_count'}:
-            self.__row_count = kwargs['row_count']
-            self.__column_count = kwargs['column_count']
+        elif kwargs.keys() == {"row_count", "column_count"}:
+            self.__row_count = kwargs["row_count"]
+            self.__column_count = kwargs["column_count"]
             self.__data = []
             for elem in args:
                 if not isinstance(elem, (int, float, complex)):
                     raise TypeError("The arguments must be int, float or complex.")
                 self.__data.append(elem)
             if len(self.__data) != self.__row_count * self.__column_count:
-                raise ValueError("The number of elements must be equal to row_count * column_count.")
+                raise ValueError(
+                    "The number of elements must be equal to row_count * column_count."
+                )
 
     def __getitem__(self, index: int) -> int | float | complex:
         return self.__data[index]
@@ -325,8 +332,8 @@ class Matrix:
         :return: a list of ColumnVector
         """
         if not all(0 <= _ < self.__column_count for _ in args):
-            raise IndexError('Invalid index')
-        return [ColumnVector(*self.__data[_::self.__column_count]) for _ in args]
+            raise IndexError("Invalid index")
+        return [ColumnVector(*self.__data[_ :: self.__column_count]) for _ in args]
 
     def get_rows(self, *args: int) -> list[RowVector]:
         """
@@ -336,8 +343,15 @@ class Matrix:
         :return: a list of RowVector
         """
         if not all(0 <= _ < self.__row_count for _ in args):
-            raise IndexError('Invalid index')
-        return [RowVector(*self.__data[ind * self.__column_count: (ind + 1) * self.__column_count]) for ind in args]
+            raise IndexError("Invalid index")
+        return [
+            RowVector(
+                *self.__data[
+                    ind * self.__column_count : (ind + 1) * self.__column_count
+                ]
+            )
+            for ind in args
+        ]
 
     def __str__(self) -> str:
         return "\n".join([str(row) for row in self.get_rows(*range(self.__row_count))])
@@ -355,11 +369,13 @@ class Matrix:
         :return: None
         """
         if len(row) != self.__column_count:
-            raise ValueError("The length of the row must be equal to the number of columns in the matrix.")
+            raise ValueError(
+                "The length of the row must be equal to the number of columns in the matrix."
+            )
         if index > self.__row_count or index < 0:
-            raise IndexError('Invalid index')
-        left = self.__data[:index * self.__column_count]
-        right = self.__data[index * self.__column_count:]
+            raise IndexError("Invalid index")
+        left = self.__data[: index * self.__column_count]
+        right = self.__data[index * self.__column_count :]
         self.__data = left + row.data + right
         self.__row_count += 1
 
@@ -372,15 +388,16 @@ class Matrix:
         :return: None
         """
         if len(column) != self.__row_count:
-            raise ValueError("The length of the column must be equal to the number of rows in the matrix.")
+            raise ValueError(
+                "The length of the column must be equal to the number of rows in the matrix."
+            )
         if index > self.__column_count or index < 0:
-            raise IndexError('Invalid index')
+            raise IndexError("Invalid index")
         self.__column_count += 1
         index -= self.__column_count
         for _, value in zip(range(self.__row_count), column):
             index += self.__column_count
             self.__data.insert(index, value)
-        
 
     def remove_row(self, index: int) -> RowVector:
         """
@@ -390,10 +407,10 @@ class Matrix:
         :return: the removed row
         """
         if index >= self.__row_count or index < 0:
-            raise IndexError('Invalid index')
+            raise IndexError("Invalid index")
         row = self.get_rows(index)
-        left = self.__data[:index * self.__column_count]
-        right = self.__data[(index + 1) * self.__column_count:]
+        left = self.__data[: index * self.__column_count]
+        right = self.__data[(index + 1) * self.__column_count :]
         self.__data = left + right
         self.__row_count -= 1
         return row[0]
@@ -413,7 +430,7 @@ class Matrix:
         :return: the removed column
         """
         if index >= self.__column_count or index < 0:
-            raise IndexError('Invalid index')
+            raise IndexError("Invalid index")
         column = self.get_columns(index)[0]
         self.__column_count -= 1
         for _ in range(self.__row_count):
@@ -424,7 +441,9 @@ class Matrix:
         """
         Return a copy of the matrix
         """
-        return Matrix(*self.__data, row_count=self.__row_count, column_count=self.__column_count)
+        return Matrix(
+            *self.__data, row_count=self.__row_count, column_count=self.__column_count
+        )
 
     def pop_row(self):
         """
@@ -434,7 +453,7 @@ class Matrix:
         """
         self.__row_count -= 1
         ret = self.get_rows(self.__row_count)[0]
-        self.__data = self.__data[:-self.__column_count]
+        self.__data = self.__data[: -self.__column_count]
         return ret
 
     def pop_column(self) -> ColumnVector:
@@ -445,7 +464,11 @@ class Matrix:
         """
         self.__column_count -= 1
         ret = self.get_columns(self.__column_count)[0]
-        for index in range(self.__column_count, len(self.__data) - self.__row_count, self.__column_count):
+        for index in range(
+            self.__column_count,
+            len(self.__data) - self.__row_count,
+            self.__column_count,
+        ):
             self.__data.pop(index)
         return ret
 
@@ -457,7 +480,9 @@ class Matrix:
         :return: None
         """
         if len(row) != self.__column_count:
-            raise ValueError("The length of the row must be equal to the number of columns in the matrix.")
+            raise ValueError(
+                "The length of the row must be equal to the number of columns in the matrix."
+            )
         self.__data.extend(row.data)
         self.__row_count += 1
 
@@ -469,7 +494,9 @@ class Matrix:
         :return: None
         """
         if len(column) != self.__row_count:
-            raise ValueError("The length of the column must be equal to the number of rows in the matrix.")
+            raise ValueError(
+                "The length of the column must be equal to the number of rows in the matrix."
+            )
         column_generator = iter(column)
         self.__column_count += 1
         for _ in range(self.__row_count):
@@ -477,11 +504,13 @@ class Matrix:
             self.__data.insert(index, next(column_generator))
             # using zip is also OK, but you should learn how to use iter and next.
             # You can refer to function insert_column, as they are similar.
-        
 
     @check_operation_add_sub
-    def __add__(self, other: 'Matrix') -> 'Matrix':
-        if self.count_rows() != other.count_rows() or self.count_columns() != other.count_columns():
+    def __add__(self, other: "Matrix") -> "Matrix":
+        if (
+            self.count_rows() != other.count_rows()
+            or self.count_columns() != other.count_columns()
+        ):
             raise ValueError("The size of the two matrices must be the same.")
         ret = self.copy()
         for index in range(len(self)):
@@ -489,32 +518,37 @@ class Matrix:
         return ret
 
     @check_operation_add_sub
-    def __sub__(self, other: 'Matrix') -> 'Matrix':
-        if self.count_rows() != other.count_rows() or self.count_columns() != other.count_columns():
+    def __sub__(self, other: "Matrix") -> "Matrix":
+        if (
+            self.count_rows() != other.count_rows()
+            or self.count_columns() != other.count_columns()
+        ):
             raise ValueError("The size of the two matrices must be the same.")
         ret = self.copy()
         for index in range(len(self)):
             ret[index] -= other[index]
         return ret
 
-    def __mul__(self, other: 'Matrix') -> 'Matrix':
+    def __mul__(self, other: "Matrix") -> "Matrix":
         if self.count_columns() != other.count_rows():
             raise ValueError(
-                "The number of columns in the first matrix must be equal to the number of rows in the second matrix.")
-        return Matrix(*(
-            sum(
-                    map(lambda x, y: x * y, row, col)
-                ) for row in (
-                    self.__data[
-                        index: index + self.count_columns()
-                    ] for index in range(0, len(self), self.count_columns())
-                ) for col in (
-                    other.__data[index: len(other): other.count_columns()] for index in range(other.count_columns())
+                "The number of columns in the first matrix must be equal to the number of rows in the second matrix."
+            )
+        return Matrix(
+            *(
+                sum(map(lambda x, y: x * y, row, col))
+                for row in (
+                    self.__data[index : index + self.count_columns()]
+                    for index in range(0, len(self), self.count_columns())
+                )
+                for col in (
+                    other.__data[index : len(other) : other.count_columns()]  # pylint: disable=protected-access
+                    for index in range(other.count_columns())
                 )
             ),
-                    row_count=self.count_rows(),
-                    column_count=other.count_columns()
-                )
+            row_count=self.count_rows(),
+            column_count=other.count_columns(),
+        )
 
     @property
     def rows(self) -> list[RowVector]:
@@ -534,12 +568,17 @@ class Matrix:
         """
         return self.get_columns(*range(self.__column_count))
 
-    def __call__(self, x: int, y: int) -> int | float | complex:
-        if x >= self.__row_count or y >= self.__column_count or x < 0 or y < 0:
-            raise IndexError("Index out of range.")
-        return self.__data[x * self.__column_count + y]
+    def __call__(self, row: int, column: int) -> int | float | complex:
+        if (
+            row >= self.__row_count
+            or column >= self.__column_count
+            or row < 0
+            or column < 0
+        ):
+            raise IndexError("Invalid index")
+        return self.__data[row * self.__column_count + column]
 
-    def transpose(self, operate_on_self: bool = False, copy: bool = False) -> 'Matrix':
+    def transpose(self, operate_on_self: bool = False, copy: bool = False) -> "Matrix":
         """
         Return the transpose of the matrix
 
@@ -557,55 +596,96 @@ class Matrix:
         self.__row_count, self.__column_count = self.__column_count, self.__row_count
         return self.copy() if copy else self
 
-    def left_multiply(self, other:'Matrix') -> 'Matrix':
+    def left_multiply(self, other: "Matrix") -> "Matrix":
         return other * self
 
-    def right_multiply(self, other:'Matrix') -> 'Matrix':
+    def right_multiply(self, other: "Matrix") -> "Matrix":
         return self * other
 
-@overload
-def add(a: Matrix, b: Matrix) -> Matrix: ...
+    def out_latex(self, var_names: list[str]):
+        if len(var_names) != self.count_columns() - 1:
+            raise ValueError(
+                "The number of variables must be equal to the number of columns minus 1."
+            )
+        r = "\\begin{align}\n"
+        for i in range(self.count_rows()):
+            out = ""
+            for j in range(self.count_columns()):
+                num = self(column=j, row=i)
+                if j == m.count_columns() - 1:
+                    out += f"&= {str(self(column=m.count_columns() - 1, row=i))} \\\\\n"
+                    r += out
+                    break
+                if num == 0:
+                    continue
+                elif isinstance(num, complex):
+                    out += f"+({num}) {var_names[j]}"
+                elif num > 0:
+                    if out:
+                        out += "+"
+                else:
+                    out += "-"
+                out += var_names[j] if abs(num) == 1 else str(abs(num)) + var_names[j]
+                out += " "
+        r += "\\end{align}"
+        return r
 
 
 @overload
-def subtract(a: Matrix, b: Matrix) -> Matrix: ...
+def add(a: Matrix, b: Matrix) -> Matrix:
+    ...
 
 
 @overload
-def add(a: RowVector, b: RowVector) -> RowVector: ...
+def subtract(a: Matrix, b: Matrix) -> Matrix:
+    ...
 
 
 @overload
-def subtract(a: RowVector, b: RowVector) -> RowVector: ...
+def add(a: RowVector, b: RowVector) -> RowVector:
+    ...
 
 
 @overload
-def add(a: ColumnVector, b: ColumnVector) -> ColumnVector: ...
+def subtract(a: RowVector, b: RowVector) -> RowVector:
+    ...
 
 
 @overload
-def subtract(a: ColumnVector, b: ColumnVector) -> ColumnVector: ...
+def add(a: ColumnVector, b: ColumnVector) -> ColumnVector:
+    ...
 
 
 @overload
-def add(a: Vector, b: Vector) -> Vector: ...
+def subtract(a: ColumnVector, b: ColumnVector) -> ColumnVector:
+    ...
 
 
 @overload
-def subtract(a: Vector, b: Vector) -> Vector: ...
+def add(a: Vector, b: Vector) -> Vector:
+    ...
 
 
 @overload
-def add(a: Any, b: Any) -> Any: ...
+def subtract(a: Vector, b: Vector) -> Vector:
+    ...
 
 
 @overload
-def subtract(a: Any, b: Any) -> Any: ...
+def add(a: Any, b: Any) -> Any:
+    ...
+
+
+@overload
+def subtract(a: Any, b: Any) -> Any:
+    ...
 
 
 @check_type_external
-def add(a: Any | Matrix | RowVector | ColumnVector | Vector,
-        b: Any | Matrix | RowVector | ColumnVector | Vector) -> Any | Matrix | RowVector | ColumnVector | Vector:
+def add(
+    a: Any | Matrix | RowVector | ColumnVector | Vector,
+    b: Any | Matrix | RowVector | ColumnVector | Vector,
+) -> Any | Matrix | RowVector | ColumnVector | Vector:
     """
     Add two vectors or matrices or other objects
 
@@ -629,8 +709,10 @@ def add(a: Any | Matrix | RowVector | ColumnVector | Vector,
 
 
 @check_type_external
-def subtract(a: Any | Matrix | RowVector | ColumnVector | Vector,
-             b: Any | Matrix | RowVector | ColumnVector | Vector) -> Any | Matrix | RowVector | ColumnVector | Vector:
+def subtract(
+    a: Any | Matrix | RowVector | ColumnVector | Vector,
+    b: Any | Matrix | RowVector | ColumnVector | Vector,
+) -> Any | Matrix | RowVector | ColumnVector | Vector:
     """
     Subtract two vectors or matrices or other objects
 
@@ -651,27 +733,33 @@ def subtract(a: Any | Matrix | RowVector | ColumnVector | Vector,
 
 
 @overload
-def scalar_multiply(a: Matrix, num: int | float | complex) -> Matrix: ...
+def scalar_multiply(a: Matrix, num: int | float | complex) -> Matrix:
+    ...
 
 
 @overload
-def scalar_multiply(a: RowVector, num: int | float | complex) -> RowVector: ...
+def scalar_multiply(a: RowVector, num: int | float | complex) -> RowVector:
+    ...
 
 
 @overload
-def scalar_multiply(a: ColumnVector, num: int | float | complex) -> ColumnVector: ...
+def scalar_multiply(a: ColumnVector, num: int | float | complex) -> ColumnVector:
+    ...
 
 
 @overload
-def scalar_multiply(a: Vector, num: int | float | complex) -> Vector: ...
+def scalar_multiply(a: Vector, num: int | float | complex) -> Vector:
+    ...
 
 
 @overload
-def scalar_multiply(a: Any, num: int | float | complex) -> Any: ...
+def scalar_multiply(a: Any, num: int | float | complex) -> Any:
+    ...
 
 
-def scalar_multiply(a: Matrix | RowVector | ColumnVector | Vector | Any,
-                    num: int | float | complex) -> Matrix | RowVector | ColumnVector | Vector | Any:
+def scalar_multiply(
+    a: Matrix | RowVector | ColumnVector | Vector | Any, num: int | float | complex
+) -> Matrix | RowVector | ColumnVector | Vector | Any:
     """
     Multiply a vector or matrix by a scalar
 
@@ -680,7 +768,11 @@ def scalar_multiply(a: Matrix | RowVector | ColumnVector | Vector | Any,
     :return: the product
     """
     if isinstance(a, Matrix):
-        return Matrix(*(num * elem for elem in a), row_count=a.count_rows(), column_count=a.count_columns())
+        return Matrix(
+            *(num * elem for elem in a),
+            row_count=a.count_rows(),
+            column_count=a.count_columns(),
+        )
     elif isinstance(a, (RowVector, ColumnVector, Vector)):
         return type(a)(*[num * num for num in a])
     else:
@@ -688,7 +780,10 @@ def scalar_multiply(a: Matrix | RowVector | ColumnVector | Vector | Any,
         return a * num
 
 
-def mul(a: Matrix | RowVector | ColumnVector | Any, b: Matrix | RowVector | ColumnVector | Any) -> Matrix | Any:
+def mul(
+    a: Matrix | RowVector | ColumnVector | Any,
+    b: Matrix | RowVector | ColumnVector | Any,
+) -> Matrix | Any:
     """
     Multiply two vectors or matrices or other objects
 
@@ -708,8 +803,10 @@ def mul(a: Matrix | RowVector | ColumnVector | Any, b: Matrix | RowVector | Colu
                 case RowVector() | ColumnVector():
                     return a * b.matrix
                 case _:
-                    raise TypeError("The second argument must be Matrix, RowVector , ColumnVector or scalar when the "
-                                    "first argument is Matrix.")
+                    raise TypeError(
+                        "The second argument must be Matrix, RowVector , ColumnVector or scalar when the "
+                        "first argument is Matrix."
+                    )
         case RowVector():
             match b:
                 case Matrix():
@@ -717,8 +814,10 @@ def mul(a: Matrix | RowVector | ColumnVector | Any, b: Matrix | RowVector | Colu
                 case ColumnVector():
                     return a * b
                 case _:
-                    raise TypeError("The second argument must be Matrix, RowVector , ColumnVector or scalar when the "
-                                    "first argument is RowVector.")
+                    raise TypeError(
+                        "The second argument must be Matrix, RowVector , ColumnVector or scalar when the "
+                        "first argument is RowVector."
+                    )
         case ColumnVector():
             match b:
                 case Matrix():
@@ -726,29 +825,37 @@ def mul(a: Matrix | RowVector | ColumnVector | Any, b: Matrix | RowVector | Colu
                 case RowVector():
                     return a.matrix * b.matrix
                 case _:
-                    raise TypeError("The second argument must be Matrix, RowVector , ColumnVector or scalar when the "
-                                    "first argument is ColumnVector.")
+                    raise TypeError(
+                        "The second argument must be Matrix, RowVector , ColumnVector or scalar when the "
+                        "first argument is ColumnVector."
+                    )
         case _:
             return a * b
 
 
-#
-#
-# def transfer_equations_to_matrix(equations, vals):
-#     return
-#
-#
-# def solve(mat):
-#     return
+def GaussJordanElimination(m: Matrix):
+    for i in range(m.count_rows()):
+        # make the diagonal element 1
+        pivot = m(i, i)
+        for j in range(m.count_columns()):
+            m[j + i * m.count_columns()] /= pivot
+        for j in range(m.count_rows()):
+            if i == j:
+                continue
+            # make the elements in column i 0 except the diagonal element
+            factor = m(row=j, column=i)
+            for k in range(m.count_columns()):
+                m[k + j * m.count_columns()] -= factor * m[k + i * m.count_columns()]
+    return m
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # below is just an example, you may change it to whatever you want, or use it to test your code
     rows: list[RowVector] = []
     columns: list[ColumnVector] = []
-    with open('vector.csv', 'r', encoding='utf-8') as f:
+    with open("vector.csv", "r", encoding="utf-8") as f:
         for i in f:
-            line = i.strip().split(',')
+            line = i.strip().split(",")
             # print(line)
             vec1 = RowVector(*map(eval, line))
             vec2 = ColumnVector(*map(eval, line))
@@ -778,7 +885,7 @@ if __name__ == '__main__':
     mat.remove_column(0)
 
     print(mat.copy())
-    print(add('---', '---'))
+    print(add("---", "---"))
     print(add(mat, mat))
     print(mat.transpose(operate_on_self=True, copy=True))
 
@@ -788,29 +895,50 @@ if __name__ == '__main__':
     print(scalar_multiply(mat, 2))
     print(mat * mat.transpose())
     print(mat.transpose() * mat)
-    print(mul('-', 15))
-    with open('equations.txt', 'r', encoding='utf-8') as f:
+    print(mul("-", 15))
+    with open("equations.txt", "r", encoding="utf-8") as f:
         equations = []
         vals = []
         for i in f:
-            if i.startswith('-'):
-                opr = '-'
-            else:
-                opr = '+'
-            for j in i:
-                num = ''
-                key = ''
-                if i in ('0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '.'):
-                    num += i
-                    continue
-                elif i == '=':
-                    # add later into vals
-                    break
-                elif i in ('+', '-'):
-                    opr = i
-                    # add this into equations
-                    continue
-                else:
-                    key += i
+            if not i.startswith("-"):
+                i = f"+{i}"
+            var = ""
+            eq = {}
+            for _ in range(len(i)):     # pylint: disable=consider-using-enumerate 
+                j = i[_]
 
-    # print(solve(transfer_equations_to_matrix(equations, vals)).out_latex_eqs())
+                if j in ("+", "-"):
+                    # add this into equations
+                    if var:
+                        eq[var] = eval(opr + num) if num else eval(f"{opr}1")  # pylint: disable=used-before-assignment,eval-used  # type: ignore
+                    num = ""
+                    var = ""
+                    in_var = False
+                    opr: Literal["+", "-"] = j
+
+                elif j == "=":
+                    vals.append(eval(i[_ + 1 :])) # pylint: disable=eval-used
+                    eq[var] = eval(opr + num) if num else eval(f"{opr}1")  # type: ignore # pylint: disable=eval-used
+                    print(eq)
+                    equations.append(eq.copy())
+                    break
+                elif in_var:  # type: ignore
+                    var += j
+                elif j in ("0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "."):
+                    num += j  # type: ignore
+                else:
+                    in_var = True
+                    var += j
+    keys = set()
+    for i in equations:
+        keys.update(i.keys())
+    keys = sorted(keys)
+    m = Matrix(*(RowVector(*(eq.get(k, 0) for k in keys)) for eq in equations))
+    m.insert_column(column=ColumnVector(*vals), index=len(keys))
+    print(m)
+
+    res = GaussJordanElimination(m.copy())
+    print(res)
+    print(res.out_latex(keys))
+    print("\\\\\n\\text{Solutions: }\\\\")
+    print(res.out_latex(keys))
