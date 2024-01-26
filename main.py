@@ -375,7 +375,8 @@ class Matrix:
             raise ValueError("The length of the column must be equal to the number of rows in the matrix.")
         if index > self.__column_count or index < 0:
             raise IndexError('Invalid index')
-        for index, value in zip(range(index, len(self.__data) + len(column.data), self.__row_count), column):
+        for _, value in zip(range(self.__row_count), column):
+            index = _ * self.__column_count + index
             self.__data.insert(index, value)
         self.__column_count += 1
 
