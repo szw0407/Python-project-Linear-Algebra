@@ -375,10 +375,12 @@ class Matrix:
             raise ValueError("The length of the column must be equal to the number of rows in the matrix.")
         if index > self.__column_count or index < 0:
             raise IndexError('Invalid index')
-        for _, value in zip(range(self.__row_count), column):
-            index = _ * self.__column_count + index
-            self.__data.insert(index, value)
         self.__column_count += 1
+        index -= self.__column_count
+        for _, value in zip(range(self.__row_count), column):
+            index += self.__column_count
+            self.__data.insert(index, value)
+        
 
     def remove_row(self, index: int) -> RowVector:
         """
