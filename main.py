@@ -13,7 +13,7 @@ Notice:
 - Try your best to make your code Pythonic and elegant with Object-Oriented Programming.
 - You can add more classes and functions if you want, just make sure the requirements are met.
 """
-from typing import Any, Callable, Iterator, overload
+from typing import Any, Callable, Iterator, Self, overload
 
 
 def check_operation_add_sub(func: Callable[..., Any]) -> Callable[..., Any]:
@@ -160,11 +160,11 @@ class Vector:
         return self.data.pop(index)
 
     @check_operation_add_sub
-    def __add__(self, other: 'Vector') -> 'Vector | None':
+    def __add__(self, other: 'Vector') -> Self:
         return type(self)(*[self[index] + other[index] for index in range(len(self))])
 
     @check_operation_add_sub
-    def __sub__(self, other: 'Vector') -> 'Vector | None':
+    def __sub__(self, other: 'Vector') -> Self:
         return type(self)(*[self[index] - other[index] for index in range(len(self))])
 
 
@@ -413,8 +413,8 @@ class Matrix:
             raise IndexError('Invalid index')
         column = self.get_columns(index)[0]
         self.__column_count -= 1
-        for ind in range(index, len(self) - len(column), self.__column_count):
-            self.__data.pop(ind)
+        for _ in range(self.__row_count):
+            self.__data.pop(index + _ * self.__column_count)
         return column
 
     def copy(self):
@@ -755,18 +755,18 @@ if __name__ == '__main__':
             vec2.append(0)
     print(rows)
     mat = Matrix(*rows)  # here you need to make a Matrix from the list of RowVectors
-    # print(mat)
-    # print(mat[0])
-    # print(len(mat))
-    # print(mat.count_rows())
-    # print(mat.count_columns())
-    # print(mat.get_columns(0, 1))
-    # print(mat.get_rows(0, 1))
-    # print(f"to insert two rows:\n{rows[0]}\n{rows[1]}")
+    print(mat)
+    print(mat[0])
+    print(len(mat))
+    print(mat.count_rows())
+    print(mat.count_columns())
+    print(mat.get_columns(0, 1))
+    print(mat.get_rows(0, 1))
+    print(f"to insert two rows:\n{rows[0]}\n{rows[1]}")
     mat.insert_row(0, rows[0])
     mat.append_row(rows[1])
     print(mat(0, 2))
-    # print(f"to insert a column:\n{columns[0]}")
+    print(f"to insert a column:\n{columns[0]}")
     mat.insert_column(0, columns[0])
 
     # mat.remove_row(0)
@@ -774,13 +774,13 @@ if __name__ == '__main__':
 
     print(mat.copy())
     print(add('---', '---'))
-    # print(add(mat, mat))
-    # print(mat.transpose(operate_on_self=True, copy=True))
-
-    # print(mat.transpose(operate_on_self=True, copy=False))
     print(add(mat, mat))
-    # print(subtract(mat, mat.copy()))
-    # print(scalar_multiply(mat, 2))
+    print(mat.transpose(operate_on_self=True, copy=True))
+
+    print(mat.transpose(operate_on_self=True, copy=False))
+    print(add(mat, mat))
+    print(subtract(mat, mat.copy()))
+    print(scalar_multiply(mat, 2))
     print(mat * mat.transpose())
     print(mat.transpose() * mat)
     print(mul('-', 15))
