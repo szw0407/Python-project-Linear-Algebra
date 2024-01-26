@@ -468,11 +468,13 @@ class Matrix:
         if len(column) != self.__row_count:
             raise ValueError("The length of the column must be equal to the number of rows in the matrix.")
         column_generator = iter(column)
-        for index in range(self.__column_count, len(self.__data) + len(column.data), self.__row_count):
+        self.__column_count += 1
+        for _ in range(self.__row_count):
+            index = _ * self.__column_count + self.__column_count - 1
             self.__data.insert(index, next(column_generator))
             # using zip is also OK, but you should learn how to use iter and next.
             # You can refer to function insert_column, as they are similar.
-        self.__column_count += 1
+        
 
     @check_operation_add_sub
     def __add__(self, other: 'Matrix') -> 'Matrix':
@@ -784,29 +786,28 @@ if __name__ == '__main__':
     print(mat * mat.transpose())
     print(mat.transpose() * mat)
     print(mul('-', 15))
-    # with open('equations.txt', 'r', encoding='utf-8') as f:
-    #     lines = f.readlines()
-    #     equations = []
-    #     vals = []
-    #     for i in lines:
-    #         if i.beginwith('-'):
-    #             opr = '-'
-    #         else:
-    #             opr = '+'
-    #         for j in i:
-    #             num = ''
-    #             key = ''
-    #             if i in ('0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '.'):
-    #                 num += i
-    #                 continue
-    #             elif i == '=':
-    #                 # add later into vals
-    #                 break
-    #             elif i in ('+', '-'):
-    #                 opr = i
-    #                 # add this into equations
-    #                 continue
-    #             else:
-    #                 key += i
+    with open('equations.txt', 'r', encoding='utf-8') as f:
+        equations = []
+        vals = []
+        for i in f:
+            if i.startswith('-'):
+                opr = '-'
+            else:
+                opr = '+'
+            for j in i:
+                num = ''
+                key = ''
+                if i in ('0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '.'):
+                    num += i
+                    continue
+                elif i == '=':
+                    # add later into vals
+                    break
+                elif i in ('+', '-'):
+                    opr = i
+                    # add this into equations
+                    continue
+                else:
+                    key += i
 
     # print(solve(transfer_equations_to_matrix(equations, vals)).out_latex_eqs())
